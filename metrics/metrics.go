@@ -43,14 +43,14 @@ func New() *metrics {
 		filesUnmodified: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: ns,
 			Subsystem: sub,
-			Name:      "backup_files_new",
+			Name:      "backup_files_unmodified",
 			Help:      "Total number of files unmodified.",
 			Buckets:   sizeBuckets,
 		}, labels),
 		filesProcessed: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: ns,
 			Subsystem: sub,
-			Name:      "backup_files_new",
+			Name:      "backup_files_processed",
 			Help:      "Total number of files processed.",
 			Buckets:   sizeBuckets,
 		}, labels),
@@ -73,7 +73,7 @@ func New() *metrics {
 		dirsUnmodified: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: ns,
 			Subsystem: sub,
-			Name:      "backup_dirs_new",
+			Name:      "backup_dirs_unmodified",
 			Help:      "Total number of dirs unmodified.",
 			Buckets:   sizeBuckets,
 		}, labels),
@@ -88,7 +88,7 @@ func New() *metrics {
 		bytesProcessed: promauto.NewHistogramVec(prometheus.HistogramOpts{
 			Namespace: ns,
 			Subsystem: sub,
-			Name:      "backup_added_bytes",
+			Name:      "backup_processed_bytes",
 			Help:      "Total number of bytes processed.",
 			Buckets:   sizeBuckets,
 		}, labels),
