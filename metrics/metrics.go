@@ -3,6 +3,8 @@ package metrics
 import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"bufio"
+	"encoding/json"
 )
 
 type metrics = struct {
@@ -18,6 +20,41 @@ type metrics = struct {
 	bytesAdded     *prometheus.HistogramVec // data_added
 	bytesProcessed *prometheus.HistogramVec // total_bytes_processed
 
+}
+
+type JsonMetrics struct {
+	message_type string
+	files_new int
+	files_changed int
+	files_unmodified int
+	dirs_new int
+	dirs_changed int
+	dirs_unmodified int
+	data_blobs int
+	tree_blobs int
+	data_added int
+	total_files_processed int
+	total_bytes_processed int
+	total_duration float64
+	snapshot_id string
+}
+
+func ReadJson(jsonReader* bufio.Reader) (*JsonMetrics, error) {
+	var stats JsonMetrics;
+	for  {
+		line, _, err := jsonReader.ReadLine()
+		if err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal(line, &stats); err!= nil {
+			return nil, err
+		}
+		// just ignore progress json
+		if stats.message_type != "summary" {
+			continue;
+		}
+		return &stats, nil
+	}
 }
 
 func New() *metrics {
