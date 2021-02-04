@@ -23,20 +23,20 @@ type metrics = struct {
 }
 
 type JsonMetrics struct {
-	message_type string
-	files_new int
-	files_changed int
-	files_unmodified int
-	dirs_new int
-	dirs_changed int
-	dirs_unmodified int
-	data_blobs int
-	tree_blobs int
-	data_added int
-	total_files_processed int
-	total_bytes_processed int
-	total_duration float64
-	snapshot_id string
+	MessageType string `json:"message_type"`
+	FilesNew int `json:"files_new"`
+	FilesChaned int `json:"files_changed"`
+	FilesUnmodified int `json:"files_unmodified"`
+	DirsNew int `json:"dirs_new"`
+	DirsChanged int `json:"dirs_changed"`
+	DirsUnmodified int `json:"dirs_unmodified"`
+	DataBlobs int `json:"data_blobs"`
+	TreeBlobs int `json:"tree_blobs"`
+	DataAdded int `json:"data_added"`
+	TotalFilesProcessed int `json:"total_files_processed"`
+	TotalBytesProcessed int `json:"total_bytes_processed"`
+	TotalDuration float64 `json:"total_duration"`
+	SnapshotId string `json:"snapshot_id"`
 }
 
 func ReadJson(jsonReader* bufio.Reader) (*JsonMetrics, error) {
@@ -50,7 +50,7 @@ func ReadJson(jsonReader* bufio.Reader) (*JsonMetrics, error) {
 			return nil, err
 		}
 		// just ignore progress json
-		if stats.message_type != "summary" {
+		if stats.MessageType != "summary" {
 			continue;
 		}
 		return &stats, nil
