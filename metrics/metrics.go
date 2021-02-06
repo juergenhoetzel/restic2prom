@@ -61,7 +61,7 @@ const ns, sub = "restic", "backup"
 
 var (
 	// TODO: allow this to be customized in the config
-	labels       = []string{"server", "repo", "snapshot_id"}
+	labels       = []string{"repo""}
 	sizeBuckets  = prometheus.ExponentialBuckets(256, 4, 8)
 	filesChanged = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: ns,
