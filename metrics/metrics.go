@@ -22,8 +22,22 @@ type metrics = struct {
 
 }
 
+type JsonMetricsError struct {
+	Op string `json:"Op"`
+	Path string `json:"Path"`
+	Err int `json:"Err"`
+}
+
 type JsonMetrics struct {
-	MessageType         string  `json:"message_type"`
+	MessageType string `json:"message_type"`
+	// progress
+	FilesDone int `json:"files_done"`
+	BytesDone int `json:"bytes_done"`
+	// error
+	Error JsonMetricsError `json:"error"`
+	During string `json:"during"`
+	Item string `json:"item"`
+	// summary
 	FilesNew            int     `json:"files_new"`
 	FilesChaned         int     `json:"files_changed"`
 	FilesUnmodified     int     `json:"files_unmodified"`
@@ -49,10 +63,6 @@ func ReadJson(jsonReader *bufio.Reader) (*JsonMetrics, error) {
 		if err := json.Unmarshal(line, &stats); err != nil {
 			return nil, err
 		}
-		// just ignore progress json
-		if stats.MessageType != "summary" {
-			continue
-		}
 		return &stats, nil
 	}
 }
@@ -61,7 +71,7 @@ const ns, sub = "restic", "backup"
 
 var (
 	// TODO: allow this to be customized in the config
-	labels       = []string{"repo""}
+	labels       = []string{"repo"}
 	sizeBuckets  = prometheus.ExponentialBuckets(256, 4, 8)
 	filesChanged = promauto.NewHistogramVec(prometheus.HistogramOpts{
 		Namespace: ns,
