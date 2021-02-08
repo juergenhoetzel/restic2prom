@@ -3,8 +3,10 @@ package metrics
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"os"
 )
 
 type metrics = struct {
@@ -22,21 +24,25 @@ type metrics = struct {
 
 }
 
-type JsonMetricsError struct {
-	Op string `json:"Op"`
+type MetricsError struct {
+	Op   string `json:"Op"`
 	Path string `json:"Path"`
-	Err int `json:"Err"`
+	Err  int    `json:"Err"`
 }
 
-type JsonMetrics struct {
+type MetricsErrorMessage struct {
+	MessageType string `json:"message_type"`
+	// error
+	Error  MetricsError `json:"error"`
+	During string       `json:"during"`
+	Item   string       `json:"item"`
+}
+
+type Metrics struct {
 	MessageType string `json:"message_type"`
 	// progress
 	FilesDone int `json:"files_done"`
 	BytesDone int `json:"bytes_done"`
-	// error
-	Error JsonMetricsError `json:"error"`
-	During string `json:"during"`
-	Item string `json:"item"`
 	// summary
 	FilesNew            int     `json:"files_new"`
 	FilesChaned         int     `json:"files_changed"`
@@ -53,15 +59,36 @@ type JsonMetrics struct {
 	SnapshotId          string  `json:"snapshot_id"`
 }
 
-func ReadJson(jsonReader *bufio.Reader) (*JsonMetrics, error) {
-	var stats JsonMetrics
+// Reads ErrorMetrics json from in, ignores unparsable json and copy it to
+// stderr
+func ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) {
+	var stats MetricsErrorMessage
 	for {
-		line, _, err := jsonReader.ReadLine()
+		line, _, err := in.ReadLine()
+		if err != nil {
+			return nil, err
+		}
+
+		if err := json.Unmarshal(line, &stats); err != nil {
+			fmt.Fprintln(os.Stderr, string(line))
+			continue
+		}
+		return &stats, nil
+	}
+}
+
+// Reads Metrics json from in, ignores unparsable json and copy it to
+// stdout
+func ReadMessage(in *bufio.Reader) (*Metrics, error) {
+	var stats Metrics
+	for {
+		line, _, err := in.ReadLine()
 		if err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal(line, &stats); err != nil {
-			return nil, err
+			fmt.Fprintln(os.Stdout, string(line))
+			continue
 		}
 		return &stats, nil
 	}
