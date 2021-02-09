@@ -9,7 +9,108 @@ import (
 	"os"
 )
 
-type metrics = struct {
+const ns, sub = "restic", "backup"
+
+// New returns an error with the supplied message.
+// New also records the stack trace at the point it was called.
+func New(repo string) *Prom {
+	prom := &Prom{repo: repo}
+	// TODO: allow this to be customized in the config
+	labels := []string{"repo"}
+	sizeBuckets := prometheus.ExponentialBuckets(256, 4, 8)
+	prom.filesChanged = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "backup_files_changed",
+		Help:      "Total number of files changed.",
+		Buckets:   sizeBuckets,
+	}, labels)
+	prom.filesNew = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "backup_files_new",
+		Help:      "Total number of files added.",
+		Buckets:   sizeBuckets,
+	}, labels)
+	prom.filesUnmodified = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "backup_files_unmodified",
+		Help:      "Total number of files unmodified.",
+		Buckets:   sizeBuckets,
+	}, labels)
+	prom.filesProcessed = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "backup_files_processed",
+		Help:      "Total number of files processed.",
+		Buckets:   sizeBuckets,
+	}, labels)
+	prom.dirsChanged = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "backup_dirs_changed",
+		Help:      "Total number of dirs changed.",
+		Buckets:   sizeBuckets,
+	}, labels)
+	prom.dirsNew = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "backup_dirs_new",
+		Help:      "Total number of dirs added.",
+		Buckets:   sizeBuckets,
+	}, labels)
+	prom.dirsUnmodified = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "backup_dirs_unmodified",
+		Help:      "Total number of dirs unmodified.",
+		Buckets:   sizeBuckets,
+	}, labels)
+
+	prom.bytesAdded = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "backup_added_bytes",
+		Help:      "Total number of bytes added.",
+		Buckets:   sizeBuckets,
+	}, labels)
+	prom.bytesProcessed = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "backup_processed_bytes",
+		Help:      "Total number of bytes processed.",
+		Buckets:   sizeBuckets,
+	}, labels)
+	prom.errors = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "errors_total",
+		Help:      "Total number of errors occured.",
+		Buckets:   sizeBuckets,
+	}, labels)
+	return prom
+}
+
+type Prom struct {
+	repo    string
+	metrics promMetrics
+	// Reads ErrorMetrics json from in, ignores unparsable json and copy it to
+	// stderr
+	numberErrors float64
+	filesChanged *prometheus.HistogramVec
+	filesNew     *prometheus.HistogramVec
+	filesUnmodified *prometheus.HistogramVec
+	filesProcessed  *prometheus.HistogramVec
+	dirsChanged *prometheus.HistogramVec
+	dirsNew *prometheus.HistogramVec
+	dirsUnmodified *prometheus.HistogramVec
+	bytesAdded *prometheus.HistogramVec
+	bytesProcessed *prometheus.HistogramVec
+	errors *prometheus.HistogramVec
+}
+
+type promMetrics = struct {
 	filesNew        *prometheus.HistogramVec
 	filesChanged    *prometheus.HistogramVec
 	filesUnmodified *prometheus.HistogramVec
@@ -22,7 +123,7 @@ type metrics = struct {
 	bytesAdded     *prometheus.HistogramVec // data_added
 	bytesProcessed *prometheus.HistogramVec // total_bytes_processed
 
-	errors         *prometheus.HistogramVec
+	errors *prometheus.HistogramVec
 }
 
 type MetricsError struct {
@@ -60,10 +161,7 @@ type Metrics struct {
 	SnapshotId          string  `json:"snapshot_id"`
 }
 
-// Reads ErrorMetrics json from in, ignores unparsable json and copy it to
-// stderr
-var numberErrors float64
-func ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) {
+func (p *Prom) ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) {
 	var stats MetricsErrorMessage
 	for {
 		line, _, err := in.ReadLine()
@@ -75,14 +173,14 @@ func ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) {
 			fmt.Fprintln(os.Stderr, string(line))
 			continue
 		}
-		numberErrors++
+		p.numberErrors++
 		return &stats, nil
 	}
 }
 
 // Reads Metrics json from in, ignores unparsable json and copy it to
 // stdout
-func ReadMessage(in *bufio.Reader) (*Metrics, error) {
+func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
 	var stats Metrics
 	for {
 		line, _, err := in.ReadLine()
@@ -97,88 +195,8 @@ func ReadMessage(in *bufio.Reader) (*Metrics, error) {
 	}
 }
 
-const ns, sub = "restic", "backup"
-
-var (
-	// TODO: allow this to be customized in the config
-	labels       = []string{"repo"}
-	sizeBuckets  = prometheus.ExponentialBuckets(256, 4, 8)
-	filesChanged = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "backup_files_changed",
-		Help:      "Total number of files changed.",
-		Buckets:   sizeBuckets,
-	}, labels)
-	filesNew = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "backup_files_new",
-		Help:      "Total number of files added.",
-		Buckets:   sizeBuckets,
-	}, labels)
-	filesUnmodified = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "backup_files_unmodified",
-		Help:      "Total number of files unmodified.",
-		Buckets:   sizeBuckets,
-	}, labels)
-	filesProcessed = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "backup_files_processed",
-		Help:      "Total number of files processed.",
-		Buckets:   sizeBuckets,
-	}, labels)
-	dirsChanged = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "backup_dirs_changed",
-		Help:      "Total number of dirs changed.",
-		Buckets:   sizeBuckets,
-	}, labels)
-	dirsNew = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "backup_dirs_new",
-		Help:      "Total number of dirs added.",
-		Buckets:   sizeBuckets,
-	}, labels)
-	dirsUnmodified = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "backup_dirs_unmodified",
-		Help:      "Total number of dirs unmodified.",
-		Buckets:   sizeBuckets,
-	}, labels)
-
-	bytesAdded = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "backup_added_bytes",
-		Help:      "Total number of bytes added.",
-		Buckets:   sizeBuckets,
-	}, labels)
-	bytesProcessed = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "backup_processed_bytes",
-		Help:      "Total number of bytes processed.",
-		Buckets:   sizeBuckets,
-	}, labels)
-	errors = promauto.NewHistogramVec(prometheus.HistogramOpts{
-		Namespace: ns,
-		Subsystem: sub,
-		Name:      "errors_total",
-		Help:      "Total number of errors occured.",
-		Buckets:   sizeBuckets,
-	}, labels)
-
-)
-
-func WriteToTextFile(repo string) {
-	errors.WithLabelValues(repo).Observe(numberErrors)
+func (p *Prom) WriteToTextFile() {
+	p.errors.WithLabelValues(p.repo).Observe(p.numberErrors)
 	// FIXME: get node exporter textfile path
 	prometheus.WriteToTextfile("/tmp/out.prom", prometheus.DefaultGatherer)
 }
