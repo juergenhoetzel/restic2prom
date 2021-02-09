@@ -22,6 +22,7 @@ type metrics = struct {
 	bytesAdded     *prometheus.HistogramVec // data_added
 	bytesProcessed *prometheus.HistogramVec // total_bytes_processed
 
+	errors         *prometheus.HistogramVec
 }
 
 type MetricsError struct {
@@ -61,6 +62,7 @@ type Metrics struct {
 
 // Reads ErrorMetrics json from in, ignores unparsable json and copy it to
 // stderr
+var numberErrors float64
 func ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) {
 	var stats MetricsErrorMessage
 	for {
@@ -73,6 +75,7 @@ func ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) {
 			fmt.Fprintln(os.Stderr, string(line))
 			continue
 		}
+		numberErrors++
 		return &stats, nil
 	}
 }
@@ -164,4 +167,18 @@ var (
 		Help:      "Total number of bytes processed.",
 		Buckets:   sizeBuckets,
 	}, labels)
+	errors = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "errors_total",
+		Help:      "Total number of errors occured.",
+		Buckets:   sizeBuckets,
+	}, labels)
+
 )
+
+func WriteToTextFile(repo string) {
+	errors.WithLabelValues(repo).Observe(numberErrors)
+	// FIXME: get node exporter textfile path
+	prometheus.WriteToTextfile("/tmp/out.prom", prometheus.DefaultGatherer)
+}
