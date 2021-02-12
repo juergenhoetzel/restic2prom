@@ -13,7 +13,7 @@ const ns, sub = "restic", "backup"
 
 // New returns an error with the supplied message.
 // New also records the stack trace at the point it was called.
-func New(repo string) *Prom {
+func New(repo string, textFile string) *Prom {
 	prom := &Prom{repo: repo}
 	// TODO: allow this to be customized in the config
 	labels := []string{"repo"}
@@ -94,6 +94,7 @@ func New(repo string) *Prom {
 
 type Prom struct {
 	repo    string
+	textFile string
 	metrics promMetrics
 	// Reads ErrorMetrics json from in, ignores unparsable json and copy it to
 	// stderr
@@ -197,6 +198,6 @@ func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
 
 func (p *Prom) WriteToTextFile() {
 	p.errors.WithLabelValues(p.repo).Observe(p.numberErrors)
-	// FIXME: get node exporter textfile path
-	prometheus.WriteToTextfile("/tmp/out.prom", prometheus.DefaultGatherer)
+	// FIXME: Atomic rename?
+	prometheus.WriteToTextfile(p.textFile, prometheus.DefaultGatherer)
 }
