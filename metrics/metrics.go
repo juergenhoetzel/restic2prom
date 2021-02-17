@@ -89,26 +89,34 @@ func New(repo string, textFile string) *Prom {
 		Help:      "Total number of errors occured.",
 		Buckets:   sizeBuckets,
 	}, labels)
+	prom.duration = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: ns,
+		Subsystem: sub,
+		Name:      "duration_seconds",
+		Help:      "backup duration in seconds",
+	}, labels)
 	return prom
 }
 
 type Prom struct {
-	repo    string
+	repo     string
 	textFile string
-	metrics promMetrics
+	metrics  promMetrics
 	// Reads ErrorMetrics json from in, ignores unparsable json and copy it to
 	// stderr
-	numberErrors float64
-	filesChanged *prometheus.HistogramVec
-	filesNew     *prometheus.HistogramVec
+	numberErrors    float64
+	
+	filesChanged    *prometheus.HistogramVec
+	filesNew        *prometheus.HistogramVec
 	filesUnmodified *prometheus.HistogramVec
 	filesProcessed  *prometheus.HistogramVec
-	dirsChanged *prometheus.HistogramVec
-	dirsNew *prometheus.HistogramVec
-	dirsUnmodified *prometheus.HistogramVec
-	bytesAdded *prometheus.HistogramVec
-	bytesProcessed *prometheus.HistogramVec
-	errors *prometheus.HistogramVec
+	dirsChanged     *prometheus.HistogramVec
+	dirsNew         *prometheus.HistogramVec
+	dirsUnmodified  *prometheus.HistogramVec
+	bytesAdded      *prometheus.HistogramVec
+	bytesProcessed  *prometheus.HistogramVec
+	errors          *prometheus.HistogramVec
+	duration        *prometheus.GaugeVec
 }
 
 type promMetrics = struct {
@@ -192,6 +200,7 @@ func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
 			fmt.Fprintln(os.Stdout, string(line))
 			continue
 		}
+		p.duration.WithLabelValues(p.repo).Set(stats.TotalDuration)
 		return &stats, nil
 	}
 }
