@@ -82,12 +82,11 @@ func New(repo string, textFile string) *Prom {
 		Help:      "Total number of bytes processed.",
 		Buckets:   sizeBuckets,
 	}, labels)
-	prom.errors = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.errors = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
-		Name:      "errors_total",
-		Help:      "Total number of errors occured.",
-		Buckets:   sizeBuckets,
+		Name:      "error_count",
+		Help:      "number of errors occured",
 	}, labels)
 	prom.duration = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
@@ -115,7 +114,7 @@ type Prom struct {
 	dirsUnmodified  *prometheus.HistogramVec
 	bytesAdded      *prometheus.HistogramVec
 	bytesProcessed  *prometheus.HistogramVec
-	errors          *prometheus.HistogramVec
+	errors          *prometheus.GaugeVec
 	duration        *prometheus.GaugeVec
 }
 
@@ -206,7 +205,7 @@ func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
 }
 
 func (p *Prom) WriteToTextFile() {
-	p.errors.WithLabelValues(p.repo).Observe(p.numberErrors)
+	p.errors.WithLabelValues(p.repo).Set(p.numberErrors)
 	// FIXME: Atomic rename?
 	prometheus.WriteToTextfile(p.textFile, prometheus.DefaultGatherer)
 }
