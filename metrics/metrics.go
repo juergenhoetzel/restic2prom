@@ -14,7 +14,7 @@ const ns, sub = "restic", "backup"
 // New returns an error with the supplied message.
 // New also records the stack trace at the point it was called.
 func New(repo string, textFile string) *Prom {
-	prom := &Prom{repo: repo}
+	prom := &Prom{repo: repo, textFile: textFile}
 	// TODO: allow this to be customized in the config
 	labels := []string{"repo"}
 	sizeBuckets := prometheus.ExponentialBuckets(256, 4, 8)
