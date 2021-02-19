@@ -17,70 +17,60 @@ func New(repo string, textFile string) *Prom {
 	prom := &Prom{repo: repo, textFile: textFile}
 	// TODO: allow this to be customized in the config
 	labels := []string{"repo"}
-	sizeBuckets := prometheus.ExponentialBuckets(256, 4, 8)
-	prom.filesChanged = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.filesChanged = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "backup_files_changed",
 		Help:      "Total number of files changed.",
-		Buckets:   sizeBuckets,
 	}, labels)
-	prom.filesNew = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.filesNew = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "backup_files_new",
 		Help:      "Total number of files added.",
-		Buckets:   sizeBuckets,
 	}, labels)
-	prom.filesUnmodified = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.filesUnmodified = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "backup_files_unmodified",
 		Help:      "Total number of files unmodified.",
-		Buckets:   sizeBuckets,
 	}, labels)
-	prom.filesProcessed = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.filesProcessed = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "backup_files_processed",
 		Help:      "Total number of files processed.",
-		Buckets:   sizeBuckets,
 	}, labels)
-	prom.dirsChanged = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.dirsChanged = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "backup_dirs_changed",
 		Help:      "Total number of dirs changed.",
-		Buckets:   sizeBuckets,
 	}, labels)
-	prom.dirsNew = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.dirsNew = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "backup_dirs_new",
 		Help:      "Total number of dirs added.",
-		Buckets:   sizeBuckets,
 	}, labels)
-	prom.dirsUnmodified = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.dirsUnmodified = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "backup_dirs_unmodified",
 		Help:      "Total number of dirs unmodified.",
-		Buckets:   sizeBuckets,
 	}, labels)
 
-	prom.bytesAdded = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.bytesAdded = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "backup_added_bytes",
 		Help:      "Total number of bytes added.",
-		Buckets:   sizeBuckets,
 	}, labels)
-	prom.bytesProcessed = promauto.NewHistogramVec(prometheus.HistogramOpts{
+	prom.bytesProcessed = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
 		Name:      "backup_processed_bytes",
 		Help:      "Total number of bytes processed.",
-		Buckets:   sizeBuckets,
 	}, labels)
 	prom.errors = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
@@ -103,33 +93,33 @@ type Prom struct {
 	metrics  promMetrics
 	// Reads ErrorMetrics json from in, ignores unparsable json and copy it to
 	// stderr
-	numberErrors    float64
-	
-	filesChanged    *prometheus.HistogramVec
-	filesNew        *prometheus.HistogramVec
-	filesUnmodified *prometheus.HistogramVec
-	filesProcessed  *prometheus.HistogramVec
-	dirsChanged     *prometheus.HistogramVec
-	dirsNew         *prometheus.HistogramVec
-	dirsUnmodified  *prometheus.HistogramVec
-	bytesAdded      *prometheus.HistogramVec
-	bytesProcessed  *prometheus.HistogramVec
+	numberErrors float64
+
+	filesChanged    *prometheus.GaugeVec
+	filesNew        *prometheus.GaugeVec
+	filesUnmodified *prometheus.GaugeVec
+	filesProcessed  *prometheus.GaugeVec
+	dirsChanged     *prometheus.GaugeVec
+	dirsNew         *prometheus.GaugeVec
+	dirsUnmodified  *prometheus.GaugeVec
+	bytesAdded      *prometheus.GaugeVec
+	bytesProcessed  *prometheus.GaugeVec
 	errors          *prometheus.GaugeVec
 	duration        *prometheus.GaugeVec
 }
 
 type promMetrics = struct {
-	filesNew        *prometheus.HistogramVec
-	filesChanged    *prometheus.HistogramVec
-	filesUnmodified *prometheus.HistogramVec
-	filesProcessed  *prometheus.HistogramVec
+	filesNew        *prometheus.GaugeVec
+	filesChanged    *prometheus.GaugeVec
+	filesUnmodified *prometheus.GaugeVec
+	filesProcessed  *prometheus.GaugeVec
 
-	dirsNew        *prometheus.HistogramVec
-	dirsChanged    *prometheus.HistogramVec
-	dirsUnmodified *prometheus.HistogramVec
+	dirsNew        *prometheus.GaugeVec
+	dirsChanged    *prometheus.GaugeVec
+	dirsUnmodified *prometheus.GaugeVec
 
-	bytesAdded     *prometheus.HistogramVec // data_added
-	bytesProcessed *prometheus.HistogramVec // total_bytes_processed
+	bytesAdded     *prometheus.GaugeVec // data_added
+	bytesProcessed *prometheus.GaugeVec // total_bytes_processed
 
 	errors *prometheus.HistogramVec
 }
@@ -154,19 +144,19 @@ type Metrics struct {
 	FilesDone int `json:"files_done"`
 	BytesDone int `json:"bytes_done"`
 	// summary
-	FilesNew            int     `json:"files_new"`
-	FilesChaned         int     `json:"files_changed"`
-	FilesUnmodified     int     `json:"files_unmodified"`
-	DirsNew             int     `json:"dirs_new"`
-	DirsChanged         int     `json:"dirs_changed"`
-	DirsUnmodified      int     `json:"dirs_unmodified"`
-	DataBlobs           int     `json:"data_blobs"`
-	TreeBlobs           int     `json:"tree_blobs"`
-	DataAdded           int     `json:"data_added"`
-	TotalFilesProcessed int     `json:"total_files_processed"`
-	TotalBytesProcessed int     `json:"total_bytes_processed"`
-	TotalDuration       float64 `json:"total_duration"`
-	SnapshotId          string  `json:"snapshot_id"`
+	FilesNew            int    `json:"files_new"`
+	FilesChaned         int    `json:"files_changed"`
+	FilesUnmodified     int    `json:"files_unmodified"`
+	DirsNew             int    `json:"dirs_new"`
+	DirsChanged         int    `json:"dirs_changed"`
+	DirsUnmodified      int    `json:"dirs_unmodified"`
+	DataBlobs           int    `json:"data_blobs"`
+	TreeBlobs           int    `json:"tree_blobs"`
+	DataAdded           int    `json:"data_added"`
+	TotalFilesProcessed int    `json:"total_files_processed"`
+	TotalBytesProcessed int    `json:"total_bytes_processed"`
+	TotalDuration       int    `json:"total_duration"`
+	SnapshotId          string `json:"snapshot_id"`
 }
 
 func (p *Prom) ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) {
@@ -199,7 +189,8 @@ func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
 			fmt.Fprintln(os.Stdout, string(line))
 			continue
 		}
-		p.duration.WithLabelValues(p.repo).Set(stats.TotalDuration)
+		p.duration.WithLabelValues(p.repo).Set(float64(stats.TotalDuration))
+		p.bytesProcessed.WithLabelValues(p.repo).Set(float64(stats.TotalBytesProcessed))
 		return &stats, nil
 	}
 }
