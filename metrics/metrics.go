@@ -145,7 +145,7 @@ type Metrics struct {
 	BytesDone int `json:"bytes_done"`
 	// summary
 	FilesNew            int    `json:"files_new"`
-	FilesChaned         int    `json:"files_changed"`
+	FilesChanged         int    `json:"files_changed"`
 	FilesUnmodified     int    `json:"files_unmodified"`
 	DirsNew             int    `json:"dirs_new"`
 	DirsChanged         int    `json:"dirs_changed"`
@@ -190,6 +190,15 @@ func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
 			continue
 		}
 		p.duration.WithLabelValues(p.repo).Set(float64(stats.TotalDuration))
+		p.filesNew.WithLabelValues(p.repo).Set(float64(stats.FilesNew))
+		p.filesUnmodified.WithLabelValues(p.repo).Set(float64(stats.FilesUnmodified))
+		p.filesChanged.WithLabelValues(p.repo).Set(float64(stats.FilesChanged))
+		p.filesProcessed.WithLabelValues(p.repo).Set(float64(stats.FilesDone))
+
+		p.dirsNew.WithLabelValues(p.repo).Set(float64(stats.DirsNew))
+		p.dirsChanged.WithLabelValues(p.repo).Set(float64(stats.DirsChanged))
+		p.dirsUnmodified.WithLabelValues(p.repo).Set(float64(stats.DirsUnmodified))
+		p.bytesAdded.WithLabelValues(p.repo).Set(float64(stats.DataAdded))
 		p.bytesProcessed.WithLabelValues(p.repo).Set(float64(stats.TotalBytesProcessed))
 		return &stats, nil
 	}
