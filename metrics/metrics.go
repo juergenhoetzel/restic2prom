@@ -90,7 +90,6 @@ func New(repo string, textFile string) *Prom {
 type Prom struct {
 	repo     string
 	textFile string
-	metrics  promMetrics
 	// Reads ErrorMetrics json from in, ignores unparsable json and copy it to
 	// stderr
 	numberErrors float64
@@ -108,21 +107,6 @@ type Prom struct {
 	duration        *prometheus.GaugeVec
 }
 
-type promMetrics = struct {
-	filesNew        *prometheus.GaugeVec
-	filesChanged    *prometheus.GaugeVec
-	filesUnmodified *prometheus.GaugeVec
-	filesProcessed  *prometheus.GaugeVec
-
-	dirsNew        *prometheus.GaugeVec
-	dirsChanged    *prometheus.GaugeVec
-	dirsUnmodified *prometheus.GaugeVec
-
-	bytesAdded     *prometheus.GaugeVec // data_added
-	bytesProcessed *prometheus.GaugeVec // total_bytes_processed
-
-	errors *prometheus.HistogramVec
-}
 
 type MetricsError struct {
 	Op   string `json:"Op"`
@@ -140,12 +124,8 @@ type MetricsErrorMessage struct {
 
 type Metrics struct {
 	MessageType string `json:"message_type"`
-	// progress
-	FilesDone int `json:"files_done"`
-	BytesDone int `json:"bytes_done"`
-	// summary
 	FilesNew            int    `json:"files_new"`
-	FilesChanged         int    `json:"files_changed"`
+	FilesChanged        int    `json:"files_changed"`
 	FilesUnmodified     int    `json:"files_unmodified"`
 	DirsNew             int    `json:"dirs_new"`
 	DirsChanged         int    `json:"dirs_changed"`
@@ -155,7 +135,7 @@ type Metrics struct {
 	DataAdded           int    `json:"data_added"`
 	TotalFilesProcessed int    `json:"total_files_processed"`
 	TotalBytesProcessed int    `json:"total_bytes_processed"`
-	TotalDuration       int    `json:"total_duration"`
+	TotalDuration       float64    `json:"total_duration"`
 	SnapshotId          string `json:"snapshot_id"`
 }
 
@@ -186,15 +166,17 @@ func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
 			return nil, err
 		}
 		if err := json.Unmarshal(line, &stats); err != nil {
-			fmt.Fprintln(os.Stdout, string(line))
+			fmt.Fprintln(os.Stdout, string(line), "Failed")
+			continue
+		}
+		if (stats.MessageType == "status") {
+			fmt.Printf("Ignoring %s\n", line )
 			continue
 		}
 		p.duration.WithLabelValues(p.repo).Set(float64(stats.TotalDuration))
 		p.filesNew.WithLabelValues(p.repo).Set(float64(stats.FilesNew))
 		p.filesUnmodified.WithLabelValues(p.repo).Set(float64(stats.FilesUnmodified))
 		p.filesChanged.WithLabelValues(p.repo).Set(float64(stats.FilesChanged))
-		p.filesProcessed.WithLabelValues(p.repo).Set(float64(stats.FilesDone))
-
 		p.dirsNew.WithLabelValues(p.repo).Set(float64(stats.DirsNew))
 		p.dirsChanged.WithLabelValues(p.repo).Set(float64(stats.DirsChanged))
 		p.dirsUnmodified.WithLabelValues(p.repo).Set(float64(stats.DirsUnmodified))
