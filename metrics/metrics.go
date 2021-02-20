@@ -166,7 +166,7 @@ func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
 			return nil, err
 		}
 		if err := json.Unmarshal(line, &stats); err != nil {
-			fmt.Fprintln(os.Stdout, string(line), "Failed")
+			fmt.Fprintln(os.Stdout, string(line))
 			continue
 		}
 		if (stats.MessageType == "status") {
