@@ -158,19 +158,18 @@ func (p *Prom) ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) 
 
 // Reads Metrics json from in, ignores unparsable json and copy it to
 // stdout
-func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
+func (p Prom) ReadMessage(in *bufio.Reader) error {
 	var stats Metrics
 	for {
 		line, _, err := in.ReadLine()
 		if err != nil {
-			return nil, err
+			return err
 		}
-		if err := json.Unmarshal(line, &stats); err != nil {
+		if err := json.Unmarshal(line, &stats); err != nil  {
 			fmt.Fprintln(os.Stdout, string(line))
 			continue
 		}
-		if (stats.MessageType == "status") {
-			fmt.Printf("Ignoring %s\n", line )
+		if (stats.MessageType != "summary") {
 			continue
 		}
 		p.duration.WithLabelValues(p.repo).Set(float64(stats.TotalDuration))
@@ -182,7 +181,6 @@ func (p Prom) ReadMessage(in *bufio.Reader) (*Metrics, error) {
 		p.dirsUnmodified.WithLabelValues(p.repo).Set(float64(stats.DirsUnmodified))
 		p.bytesAdded.WithLabelValues(p.repo).Set(float64(stats.DataAdded))
 		p.bytesProcessed.WithLabelValues(p.repo).Set(float64(stats.TotalBytesProcessed))
-		return &stats, nil
 	}
 }
 
