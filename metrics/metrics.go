@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
+	"io"
 	"os"
 )
 
@@ -107,7 +108,6 @@ type Prom struct {
 	duration        *prometheus.GaugeVec
 }
 
-
 type MetricsError struct {
 	Op   string `json:"Op"`
 	Path string `json:"Path"`
@@ -123,28 +123,35 @@ type MetricsErrorMessage struct {
 }
 
 type Metrics struct {
-	MessageType string `json:"message_type"`
-	FilesNew            int    `json:"files_new"`
-	FilesChanged        int    `json:"files_changed"`
-	FilesUnmodified     int    `json:"files_unmodified"`
-	DirsNew             int    `json:"dirs_new"`
-	DirsChanged         int    `json:"dirs_changed"`
-	DirsUnmodified      int    `json:"dirs_unmodified"`
-	DataBlobs           int    `json:"data_blobs"`
-	TreeBlobs           int    `json:"tree_blobs"`
-	DataAdded           int    `json:"data_added"`
-	TotalFilesProcessed int    `json:"total_files_processed"`
-	TotalBytesProcessed int    `json:"total_bytes_processed"`
-	TotalDuration       float64    `json:"total_duration"`
-	SnapshotId          string `json:"snapshot_id"`
+	MessageType         string  `json:"message_type"`
+	FilesNew            int     `json:"files_new"`
+	FilesChanged        int     `json:"files_changed"`
+	FilesUnmodified     int     `json:"files_unmodified"`
+	DirsNew             int     `json:"dirs_new"`
+	DirsChanged         int     `json:"dirs_changed"`
+	DirsUnmodified      int     `json:"dirs_unmodified"`
+	DataBlobs           int     `json:"data_blobs"`
+	TreeBlobs           int     `json:"tree_blobs"`
+	DataAdded           int     `json:"data_added"`
+	TotalFilesProcessed int     `json:"total_files_processed"`
+	TotalBytesProcessed int     `json:"total_bytes_processed"`
+	TotalDuration       float64 `json:"total_duration"`
+	SnapshotId          string  `json:"snapshot_id"`
 }
 
-func (p *Prom) ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) {
+// Collect JSON error messages unil EOF
+func (p *Prom) CollectStderr(in *bufio.Reader) {
 	var stats MetricsErrorMessage
 	for {
 		line, _, err := in.ReadLine()
+
+		if err == io.EOF {
+			p.errors.WithLabelValues(p.repo).Set(p.numberErrors)
+			return
+		}
+
 		if err != nil {
-			return nil, err
+			fmt.Fprintln(os.Stderr, err)
 		}
 
 		if err := json.Unmarshal(line, &stats); err != nil {
@@ -152,7 +159,6 @@ func (p *Prom) ReadErrorMessage(in *bufio.Reader) (*MetricsErrorMessage, error) 
 			continue
 		}
 		p.numberErrors++
-		return &stats, nil
 	}
 }
 
@@ -165,11 +171,11 @@ func (p Prom) ReadMessage(in *bufio.Reader) error {
 		if err != nil {
 			return err
 		}
-		if err := json.Unmarshal(line, &stats); err != nil  {
+		if err := json.Unmarshal(line, &stats); err != nil {
 			fmt.Fprintln(os.Stdout, string(line))
 			continue
 		}
-		if (stats.MessageType != "summary") {
+		if stats.MessageType != "summary" {
 			continue
 		}
 		p.duration.WithLabelValues(p.repo).Set(float64(stats.TotalDuration))
@@ -185,7 +191,5 @@ func (p Prom) ReadMessage(in *bufio.Reader) error {
 }
 
 func (p *Prom) WriteToTextFile() {
-	p.errors.WithLabelValues(p.repo).Set(p.numberErrors)
-	// FIXME: Atomic rename?
 	prometheus.WriteToTextfile(p.textFile, prometheus.DefaultGatherer)
 }
