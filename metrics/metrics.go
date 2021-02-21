@@ -164,12 +164,16 @@ func (p *Prom) CollectStderr(in *bufio.Reader) {
 
 // Reads Metrics json from in, ignores unparsable json and copy it to
 // stdout
-func (p Prom) ReadMessage(in *bufio.Reader) error {
+func (p Prom) CollectStdout(in *bufio.Reader) {
 	var stats Metrics
 	for {
 		line, _, err := in.ReadLine()
+
+		if err == io.EOF {
+			return
+		}
 		if err != nil {
-			return err
+			fmt.Fprintln(os.Stderr, err)
 		}
 		if err := json.Unmarshal(line, &stats); err != nil {
 			fmt.Fprintln(os.Stdout, string(line))
