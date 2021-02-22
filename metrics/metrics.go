@@ -94,7 +94,8 @@ type Prom struct {
 	// Reads ErrorMetrics json from in, ignores unparsable json and copy it to
 	// stderr
 	numberErrors float64
-
+	// stdout successfuly parsed?
+	parsed bool
 	filesChanged    *prometheus.GaugeVec
 	filesNew        *prometheus.GaugeVec
 	filesUnmodified *prometheus.GaugeVec
@@ -164,7 +165,7 @@ func (p *Prom) CollectStderr(in *bufio.Reader) {
 
 // Reads Metrics json from in, ignores unparsable json and copy it to
 // stdout
-func (p Prom) CollectStdout(in *bufio.Reader) {
+func (p *Prom) CollectStdout(in *bufio.Reader) {
 	var stats Metrics
 	for {
 		line, _, err := in.ReadLine()
@@ -191,9 +192,13 @@ func (p Prom) CollectStdout(in *bufio.Reader) {
 		p.dirsUnmodified.WithLabelValues(p.repo).Set(float64(stats.DirsUnmodified))
 		p.bytesAdded.WithLabelValues(p.repo).Set(float64(stats.DataAdded))
 		p.bytesProcessed.WithLabelValues(p.repo).Set(float64(stats.TotalBytesProcessed))
+		p.parsed = true
 	}
 }
 
-func (p *Prom) WriteToTextFile() {
-	prometheus.WriteToTextfile(p.textFile, prometheus.DefaultGatherer)
+func (p *Prom) WriteToTextFile() bool {
+	if p.parsed {
+		prometheus.WriteToTextfile(p.textFile, prometheus.DefaultGatherer)
+	}
+	return p.parsed
 }
