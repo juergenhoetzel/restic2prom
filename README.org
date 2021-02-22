@@ -4,3 +4,7 @@
 
 Work in progress
 
+
+* Features
+
+  - Automatic label {repository=$RESTIC_REPOSITORY} from environment or commandline option
