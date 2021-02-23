@@ -18,14 +18,16 @@ func main() {
 		Use: "restic",
 		Run: func(cmd *cobra.Command, args []string) {
 			repo, _ := cmd.Flags().GetString("repo")
-			// FIXME
-			prom = metrics.New(repo, "/tmp/out.prom")
+			textfileDir, _ := cmd.Flags().GetString("textfile.directory")
+			prom = metrics.New(repo, textfileDir)
 		},
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
 			UnknownFlags: true,
 		},
 	}
 	rootCmd.PersistentFlags().StringP("repo", "r", os.Getenv("RESTIC_REPOSITORY"), "_")
+	rootCmd.PersistentFlags().StringP("textfile.directory", "t", "", "Directory to write text files with metrics to (required).")
+	rootCmd.MarkPersistentFlagRequired("textfile.directory")
 	rootCmd.Execute()
 	copy(args, os.Args[2:])
 	cmd := exec.Command(os.Args[1], args...)
