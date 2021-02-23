@@ -10,33 +10,13 @@ import (
 	"strings"
 )
 
-func main() {
-	args := make([]string, len(os.Args))
-	var prom *metrics.Prom
-	// we leverage cobra to get the repository from restic flags or environment variables
-	rootCmd := &cobra.Command{
-		Use: "restic",
-		Run: func(cmd *cobra.Command, args []string) {
-			repo, _ := cmd.Flags().GetString("repo")
-			textfileDir, _ := cmd.Flags().GetString("textfile.directory")
-			prom = metrics.New(repo, textfileDir)
-		},
-		FParseErrWhitelist: cobra.FParseErrWhitelist{
-			UnknownFlags: true,
-		},
-	}
-	rootCmd.PersistentFlags().StringP("repo", "r", os.Getenv("RESTIC_REPOSITORY"), "_")
-	rootCmd.PersistentFlags().StringP("textfile.directory", "t", "", "Directory to write text files with metrics to (required).")
-	rootCmd.MarkPersistentFlagRequired("textfile.directory")
-	rootCmd.Execute()
-	copy(args, os.Args[2:])
-	cmd := exec.Command(os.Args[1], args...)
+func startRestic(prom *metrics.Prom, resticArgs []string) {
+	cmd := exec.Command(resticArgs[0], resticArgs[1:]...)
 	cmd.Stdin = os.Stdin
 	stdoutPipe, _ := cmd.StdoutPipe()
 	stdoutReader := bufio.NewReader(stdoutPipe)
 	stderrPipe, _ := cmd.StderrPipe()
 	stderrReader := bufio.NewReader(stderrPipe)
-
 	cmd.Start()
 
 	go prom.CollectStdout(stdoutReader)
@@ -55,4 +35,24 @@ func main() {
 			os.Exit(1)
 		}
 	}
+}
+
+func main() {
+	// we leverage cobra to get the repository from restic flags or environment variables
+	rootCmd := &cobra.Command{
+		Use: "restic",
+		Run: func(cmd *cobra.Command, args []string) {
+			repo, _ := cmd.Flags().GetString("repo")
+			textfileDir, _ := cmd.Flags().GetString("textfile.directory")
+			prom := metrics.New(repo, textfileDir)
+			startRestic(prom, os.Args[3:])
+		},
+		FParseErrWhitelist: cobra.FParseErrWhitelist{
+			UnknownFlags: true,
+		},
+	}
+	rootCmd.PersistentFlags().StringP("repo", "r", os.Getenv("RESTIC_REPOSITORY"), "_")
+	rootCmd.PersistentFlags().StringP("textfile.directory", "t", "", "Directory to write text files with metrics to (required).")
+	rootCmd.MarkPersistentFlagRequired("textfile.directory")
+	rootCmd.Execute()
 }
