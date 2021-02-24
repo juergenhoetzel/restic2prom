@@ -168,8 +168,7 @@ func (p *Prom) CollectStderr(in *bufio.Reader) {
 func (p *Prom) CollectStdout(in *bufio.Reader) {
 	var stats Metrics
 	for {
-		line, _, err := in.ReadLine()
-
+		line, err := in.ReadBytes('\n')
 		if err == io.EOF {
 			return
 		}
