@@ -26,7 +26,6 @@ func startRestic(prom *metrics.Prom, resticArgs []string) {
 	if !prom.WriteToTextFile() {
 		fmt.Fprintf(os.Stderr, "Did not receive JSON metrics. Missed to add '--json' flag?\n")
 	}
-	// FIXME: Write metrics in error case?
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); ok {
 			os.Exit(cmd.ProcessState.ExitCode())
