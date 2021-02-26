@@ -42,8 +42,8 @@ func main() {
 		Use: "restic",
 		Run: func(cmd *cobra.Command, args []string) {
 			repo, _ := cmd.Flags().GetString("repo")
-			textfileDir, _ := cmd.Flags().GetString("textfile")
-			prom := metrics.New(repo, textfileDir)
+			textfile, _ := cmd.Flags().GetString("textfile")
+			prom := metrics.New(repo, textfile)
 			startRestic(prom, os.Args[3:])
 		},
 		FParseErrWhitelist: cobra.FParseErrWhitelist{
