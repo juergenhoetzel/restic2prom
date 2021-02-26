@@ -43,6 +43,10 @@ func main() {
 		Run: func(cmd *cobra.Command, args []string) {
 			repo, _ := cmd.Flags().GetString("repo")
 			textfile, _ := cmd.Flags().GetString("textfile")
+			if (!strings.HasSuffix(textfile, ".prom")) {
+				fmt.Fprintf(os.Stderr, "Invalid textfile name '%s' (missing '.prom' suffix)\n", textfile)
+				os.Exit(1)
+			}
 			prom := metrics.New(repo, textfile)
 			startRestic(prom, os.Args[3:])
 		},
