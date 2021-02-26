@@ -42,7 +42,7 @@ func main() {
 		Use: "restic",
 		Run: func(cmd *cobra.Command, args []string) {
 			repo, _ := cmd.Flags().GetString("repo")
-			textfileDir, _ := cmd.Flags().GetString("textfile.directory")
+			textfileDir, _ := cmd.Flags().GetString("textfile")
 			prom := metrics.New(repo, textfileDir)
 			startRestic(prom, os.Args[3:])
 		},
@@ -51,7 +51,7 @@ func main() {
 		},
 	}
 	rootCmd.PersistentFlags().StringP("repo", "r", os.Getenv("RESTIC_REPOSITORY"), "_")
-	rootCmd.PersistentFlags().StringP("textfile.directory", "t", "", "Directory to write text files with metrics to (required).")
-	rootCmd.MarkPersistentFlagRequired("textfile.directory")
+	rootCmd.PersistentFlags().StringP("textfile", "t", "", ".prom output file (required).")
+	rootCmd.MarkPersistentFlagRequired("textfile")
 	rootCmd.Execute()
 }
