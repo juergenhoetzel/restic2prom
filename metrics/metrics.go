@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"io"
 	"os"
+	"strings"
 )
 
 const ns, sub = "restic", "backup"
@@ -144,6 +145,11 @@ type Metrics struct {
 func (p *Prom) CollectStderr(in *bufio.Reader) {
 	var stats MetricsErrorMessage
 	for {
+		prompt, _ := in.Peek(31) // FIXME hardcoded: Peek for password prompt
+		if (strings.HasPrefix(string(prompt),"enter password for repository: ")) {
+			fmt.Fprintln(os.Stderr, string(prompt))
+		}
+
 		line, _, err := in.ReadLine()
 
 		if err == io.EOF {
