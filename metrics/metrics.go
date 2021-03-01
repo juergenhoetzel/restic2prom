@@ -182,7 +182,7 @@ func (p *Prom) CollectStdout(in *bufio.Reader) {
 			fmt.Fprintln(os.Stderr, err)
 		}
 		if err := json.Unmarshal(line, &stats); err != nil {
-			fmt.Fprintln(os.Stdout, string(line))
+			fmt.Fprint(os.Stdout, string(line))
 			continue
 		}
 		if stats.MessageType != "summary" {
