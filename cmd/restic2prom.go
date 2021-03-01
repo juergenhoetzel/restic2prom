@@ -17,7 +17,11 @@ func startRestic(prom *metrics.Prom, resticArgs []string) {
 	stdoutReader := bufio.NewReader(stdoutPipe)
 	stderrPipe, _ := cmd.StderrPipe()
 	stderrReader := bufio.NewReader(stderrPipe)
-	cmd.Start()
+
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "Failed to start command: %v\n", err)
+		os.Exit(1)
+	}
 
 	go prom.CollectStdout(stdoutReader)
 	go prom.CollectStderr(stderrReader)
