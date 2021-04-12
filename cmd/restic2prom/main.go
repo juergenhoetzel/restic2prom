@@ -3,7 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/juergenhoetzel/restic2prom/metrics"
+	"github.com/juergenhoetzel/restic2prom/internal/metrics"
 	"github.com/spf13/cobra"
 	"os"
 	"os/exec"
