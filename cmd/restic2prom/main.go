@@ -58,7 +58,7 @@ func main() {
 			UnknownFlags: true,
 		},
 	}
-	rootCmd.PersistentFlags().StringP("repo", "r", os.Getenv("RESTIC_REPOSITORY"), "_")
+	rootCmd.PersistentFlags().StringP("repo", "r", os.Getenv("RESTIC_REPOSITORY"), "restic repository")
 	rootCmd.PersistentFlags().StringP("textfile", "t", "", ".prom output file (required).")
 	rootCmd.MarkPersistentFlagRequired("textfile")
 	rootCmd.Execute()
