@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/juergenhoetzel/restic2prom/internal/metrics"
-	"github.com/spf13/cobra"
+	"flag"
 	"os"
 	"os/exec"
 	"strings"
@@ -41,25 +41,23 @@ func startRestic(prom *metrics.Prom, resticArgs []string) {
 }
 
 func main() {
-	// we leverage cobra to get the repository from restic flags or environment variables
-	rootCmd := &cobra.Command{
-		Use: "restic",
-		Run: func(cmd *cobra.Command, args []string) {
-			repo, _ := cmd.Flags().GetString("repo")
-			textfile, _ := cmd.Flags().GetString("textfile")
-			if (!strings.HasSuffix(textfile, ".prom")) {
-				fmt.Fprintf(os.Stderr, "Invalid textfile name '%s' (missing '.prom' suffix)\n", textfile)
-				os.Exit(1)
-			}
-			prom := metrics.New(repo, textfile)
-			startRestic(prom, os.Args[3:])
-		},
-		FParseErrWhitelist: cobra.FParseErrWhitelist{
-			UnknownFlags: true,
-		},
+	var textfile = flag.String("t", "", "node exporter textfile")
+	flag.Parse()
+	if (!strings.HasSuffix(*textfile, ".prom")) {
+		fmt.Fprintf(os.Stderr, "Invalid textfile name '%s' (missing '.prom' suffix)\n", *textfile)
+		os.Exit(1)
 	}
-	rootCmd.PersistentFlags().StringP("repo", "r", os.Getenv("RESTIC_REPOSITORY"), "restic repository")
-	rootCmd.PersistentFlags().StringP("textfile", "t", "", ".prom output file (required).")
-	rootCmd.MarkPersistentFlagRequired("textfile")
-	rootCmd.Execute()
+
+	repo := os.Getenv("RESTIC_REPOSITORY")
+	// poor mans command line parsing of retic command
+	if (repo == "") {
+		for i, arg := range flag.Args() {
+			// FIXME: // --repository-file file       file to read the repository location from (default: $RESTIC_REPOSITORY_FILE)
+			if arg == "-r" || arg == "--repo" {
+				repo = flag.Arg(i+1)
+			}
+		}
+	}
+	prom := metrics.New(repo, *textfile)
+	startRestic(prom, flag.Args())
 }
