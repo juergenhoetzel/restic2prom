@@ -64,8 +64,8 @@ func main() {
 				}
 				repo = strings.TrimSpace(string(data))
 			}
+		}
 	}
 	prom := metrics.New(repo, *textfile)
 	startRestic(prom, flag.Args())
-	}
 }
