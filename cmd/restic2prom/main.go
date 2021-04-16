@@ -7,6 +7,7 @@ import (
 	"flag"
 	"os"
 	"os/exec"
+	"io/ioutil"
 	"strings"
 )
 
@@ -52,12 +53,19 @@ func main() {
 	// poor mans command line parsing of retic command
 	if (repo == "") {
 		for i, arg := range flag.Args() {
-			// FIXME: // --repository-file file       file to read the repository location from (default: $RESTIC_REPOSITORY_FILE)
 			if arg == "-r" || arg == "--repo" {
 				repo = flag.Arg(i+1)
+			} else
+			if arg == "--repository-file" {
+				data, err := ioutil.ReadFile(flag.Arg(i+1));
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Invalid repository filename '%s': %s)\n", flag.Arg(i+1),err)
+					os.Exit(1);
+				}
+				repo = strings.TrimSpace(string(data))
 			}
-		}
 	}
 	prom := metrics.New(repo, *textfile)
 	startRestic(prom, flag.Args())
+	}
 }
