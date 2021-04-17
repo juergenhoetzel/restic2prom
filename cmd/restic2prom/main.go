@@ -44,6 +44,10 @@ func startRestic(prom *metrics.Prom, resticArgs []string) {
 func main() {
 	var textfile = flag.String("t", "", "node exporter textfile")
 	flag.Parse()
+	if ((*textfile) == "") {
+		flag.Usage()
+		os.Exit(1)
+	}
 	if (!strings.HasSuffix(*textfile, ".prom")) {
 		fmt.Fprintf(os.Stderr, "Invalid textfile name '%s' (missing '.prom' suffix)\n", *textfile)
 		os.Exit(1)
