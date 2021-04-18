@@ -70,6 +70,19 @@ func main() {
 			}
 		}
 	}
-	prom := metrics.New(repo, *textfile)
+	// collect DIRs/FILEs to backup
+	var files []string
+	var dashdash bool
+	for i := 0; i < len(flag.Args()); i++ {
+		if flag.Args()[i] == "--"  {
+			dashdash = true
+			files = flag.Args()[i+1:]
+			break;
+		}
+	}
+	if (!dashdash) {
+		fmt.Fprintln(os.Stderr, "No '--' found in command line, cannot figure out label values for backup directories")
+	}
+	prom := metrics.New(repo, *textfile, files)
 	startRestic(prom, flag.Args())
 }

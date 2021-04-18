@@ -15,10 +15,13 @@ const ns, sub = "restic", "backup"
 
 // New returns an error with the supplied message.
 // New also records the stack trace at the point it was called.
-func New(repo string, textFile string) *Prom {
-	prom := &Prom{repo: repo, textFile: textFile}
-	// TODO: allow this to be customized in the config
-	labels := []string{"repo"}
+func New(repo string, textFile string, files []string) *Prom {
+	prom := &Prom{textFile: textFile, labelValues: append(files, repo)}
+	labels := []string{}
+	for i := 0; i < len(files); i++ {
+		labels = append(labels, fmt.Sprintf("dir_%d", i))
+	}
+	labels = append(labels, "repo")
 	prom.filesChanged = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: ns,
 		Subsystem: sub,
@@ -90,7 +93,7 @@ func New(repo string, textFile string) *Prom {
 }
 
 type Prom struct {
-	repo     string
+	labelValues []string
 	textFile string
 	// Reads ErrorMetrics json from in, ignores unparsable json and copy it to
 	// stderr
@@ -153,7 +156,7 @@ func (p *Prom) CollectStderr(in *bufio.Reader) {
 		line, _, err := in.ReadLine()
 
 		if err == io.EOF {
-			p.errors.WithLabelValues(p.repo).Set(p.numberErrors)
+			p.errors.WithLabelValues(p.labelValues...).Set(p.numberErrors)
 			return
 		}
 
@@ -188,22 +191,24 @@ func (p *Prom) CollectStdout(in *bufio.Reader) {
 		if stats.MessageType != "summary" {
 			continue
 		}
-		p.duration.WithLabelValues(p.repo).Set(float64(stats.TotalDuration))
-		p.filesNew.WithLabelValues(p.repo).Set(float64(stats.FilesNew))
-		p.filesUnmodified.WithLabelValues(p.repo).Set(float64(stats.FilesUnmodified))
-		p.filesChanged.WithLabelValues(p.repo).Set(float64(stats.FilesChanged))
-		p.dirsNew.WithLabelValues(p.repo).Set(float64(stats.DirsNew))
-		p.dirsChanged.WithLabelValues(p.repo).Set(float64(stats.DirsChanged))
-		p.dirsUnmodified.WithLabelValues(p.repo).Set(float64(stats.DirsUnmodified))
-		p.bytesAdded.WithLabelValues(p.repo).Set(float64(stats.DataAdded))
-		p.bytesProcessed.WithLabelValues(p.repo).Set(float64(stats.TotalBytesProcessed))
+		p.duration.WithLabelValues(p.labelValues...).Set(float64(stats.TotalDuration))
+		p.filesNew.WithLabelValues(p.labelValues...).Set(float64(stats.FilesNew))
+		p.filesUnmodified.WithLabelValues(p.labelValues...).Set(float64(stats.FilesUnmodified))
+		p.filesChanged.WithLabelValues(p.labelValues...).Set(float64(stats.FilesChanged))
+		p.dirsNew.WithLabelValues(p.labelValues...).Set(float64(stats.DirsNew))
+		p.dirsChanged.WithLabelValues(p.labelValues...).Set(float64(stats.DirsChanged))
+		p.dirsUnmodified.WithLabelValues(p.labelValues...).Set(float64(stats.DirsUnmodified))
+		p.bytesAdded.WithLabelValues(p.labelValues...).Set(float64(stats.DataAdded))
+		p.bytesProcessed.WithLabelValues(p.labelValues...).Set(float64(stats.TotalBytesProcessed))
 		p.parsed = true
 	}
 }
 
 func (p *Prom) WriteToTextFile() bool {
 	if p.parsed {
-		prometheus.WriteToTextfile(p.textFile, prometheus.DefaultGatherer)
+		if err := prometheus.WriteToTextfile(p.textFile, prometheus.DefaultGatherer); err!=nil {
+			fmt.Fprintln(os.Stderr, err)
+		}
 	}
 	return p.parsed
 }
