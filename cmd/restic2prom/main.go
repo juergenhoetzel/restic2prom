@@ -53,6 +53,12 @@ func main() {
 		os.Exit(1)
 	}
 
+
+	if (len(flag.Args()) == 0) {
+		fmt.Fprintln(os.Stderr, "missing restic command: restic2prom -t metrics.prom -- restic [restic options]")
+		os.Exit(1)
+	}
+
 	repo := os.Getenv("RESTIC_REPOSITORY")
 	// poor mans command line parsing of retic command
 	if (repo == "") {
